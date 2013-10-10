@@ -9,39 +9,34 @@ using namespace std;
 typedef double WeightType;
 typedef char StateType;
 
-struct Vertex
+struct TVertex
 {
-	Vertex(){}
+	TVertex(){}
 
-	Vertex(int index, string name, WeightType weight, bool boolPar)
-	{
-		this->Index = index;
-		this->Name = name;
-		this->Weight = weight;
-		this->BoolPar = boolPar;
-	}
-	int Index;
-	string Name;
-	WeightType Weight;
-	bool BoolPar;
+	TVertex(int index, string name, WeightType weight, bool boolPar)
+	:Index(index), Name(name), Weight(weight), BoolPar(boolPar)
+	{}
+
+	int 		Index;
+	string 		Name;
+	WeightType 	Weight;
+	bool 		BoolPar;
 };
 
-struct Connected
+struct TEdge
 {
-	Connected(int secondVertexIndex, WeightType weight, StateType state)
-	{
-		this->secondVertexIndex = secondVertexIndex;
-		this->Weight = weight;
-		this->state = state;
-	}
-	StateType state;
-	int secondVertexIndex;
-	WeightType Weight;
+	TEdge(int aimVertexIndex, WeightType weight, StateType state)
+	:State(state), AimVertexIndex(aimVertexIndex), Weight(weight) 
+	{}
+
+	StateType 	State;
+	int 		AimVertexIndex;
+	WeightType 	Weight;
 };
 
-typedef vector< vector<Connected> > Graph;
+typedef vector< vector<TEdge> > Graph;
 
-vector<Vertex> vertexInfo;
+vector<TVertex> vertexInfo;
 vector < vector<int> > ResultVertexes;
 Graph graph;
 
@@ -61,11 +56,11 @@ int WideSearch (int vertexIndex)
      {
 	   for (int j=0; j<graph[CurrentLevel[i]].size(); j++)
 	   {
-		   if (! vertexInfo[graph[CurrentLevel[i]][j].secondVertexIndex].BoolPar) 
+		   if (! vertexInfo[graph[CurrentLevel[i]][j].AimVertexIndex].BoolPar) 
 		   {
-//			    ResultVertexes.push_back(graph[CurrentLevel[i]][j].secondVertexIndex);
-				NextLevel.push_back(graph[CurrentLevel[i]][j].secondVertexIndex);		
-				vertexInfo[graph[CurrentLevel[i]][j].secondVertexIndex].BoolPar=true;
+//			    ResultVertexes.push_back(graph[CurrentLevel[i]][j].AimVertexIndex);
+				NextLevel.push_back(graph[CurrentLevel[i]][j].AimVertexIndex);		
+				vertexInfo[graph[CurrentLevel[i]][j].AimVertexIndex].BoolPar=true;
 		   } 
 	    }
      }
@@ -88,21 +83,21 @@ int CreateGraph(int vertexCount)
 {
 	graph = Graph (vertexCount);
 	for(int i=0; i<vertexCount; i++)
-		graph[i] = vector<Connected>();
-	vertexInfo = vector<Vertex>(vertexCount);
+		graph[i] = vector<TEdge>();
+	vertexInfo = vector<TVertex>(vertexCount);
 	for(int i=0; i<vertexCount; i++)
-		vertexInfo[i] = Vertex(i, "", 0.0, false);
+		vertexInfo[i] = TVertex(i, "", 0.0, false);
 	return 0;
 }
 
 int AddEdge(int v1, int v2, WeightType weight)
 {
-	graph[v1].push_back(Connected(v2, weight, 0));
-	graph[v2].push_back(Connected(v1, weight, 0));
+	graph[v1].push_back(TEdge(v2, weight, 0));
+	graph[v2].push_back(TEdge(v1, weight, 0));
 	return 0;
 }
 
-int setVertex(int index, string name, WeightType weight, bool boolPar)
+int SetVertex(int index, string name, WeightType weight, bool boolPar)
 {
 	vertexInfo[index].Name = name;
 	vertexInfo[index].Weight = weight;
@@ -127,10 +122,10 @@ int DepthSearch(int vertexIndex)
 		int CurrentVertexWeight = graph[CurrentVertex].size();
 		for (int i = 0; i < CurrentVertexWeight; i++)
 		{
-			if (! vertexInfo[graph[CurrentVertex][i].secondVertexIndex].BoolPar)
+			if (! vertexInfo[graph[CurrentVertex][i].AimVertexIndex].BoolPar)
 			{				
-				Stack.push_back(graph[CurrentVertex][i].secondVertexIndex);
-				vertexInfo[graph[CurrentVertex][i].secondVertexIndex].BoolPar = true;
+				Stack.push_back(graph[CurrentVertex][i].AimVertexIndex);
+				vertexInfo[graph[CurrentVertex][i].AimVertexIndex].BoolPar = true;
 			}
 		}
 	}
@@ -141,21 +136,21 @@ int DepthSearch(int vertexIndex)
 	return 0;
 }
 
-int markEdge(int v1, int v2, StateType stateValue)
+int MarkEdge(int v1, int v2, StateType stateValue)
 {
 	for(int i=0; i<graph[v1].size(); i++)
 	{
-		if(graph[v1][i].secondVertexIndex == v2)
+		if(graph[v1][i].AimVertexIndex == v2)
 		{
-			graph[v1][i].state = stateValue;
+			graph[v1][i].State = stateValue;
 			break;
 		}
 	}
 	for(int i=0; i<graph[v2].size(); i++)
 	{
-		if(graph[v2][i].secondVertexIndex == v1)
+		if(graph[v2][i].AimVertexIndex == v1)
 		{
-			graph[v2][i].state = stateValue;
+			graph[v2][i].State = stateValue;
 			break;
 		}
 	}
@@ -170,7 +165,7 @@ int BasedTreeSearch(int vertexIndex)
 	vertexInfo[vertexIndex].BoolPar = true;
 	for(int i = 0; i<graph[vertexIndex].size(); i++)
 	{
-		Stack.push(make_pair(vertexIndex, graph[vertexIndex][i].secondVertexIndex));
+		Stack.push(make_pair(vertexIndex, graph[vertexIndex][i].AimVertexIndex));
 	}
 	pair<int, int> p;
 	while (Stack.size() > 0)
@@ -180,10 +175,10 @@ int BasedTreeSearch(int vertexIndex)
 		if(!vertexInfo[p.second].BoolPar)
 		{
 			vertexInfo[p.second].BoolPar = true;
-			markEdge(p.first, p.second, 1);
+			MarkEdge(p.first, p.second, 1);
 			for(int i = 0; i<graph[p.second].size(); i++)
 			{
-				Stack.push(make_pair(p.second, graph[p.second][i].secondVertexIndex));
+				Stack.push(make_pair(p.second, graph[p.second][i].AimVertexIndex));
 			}
 		}
 	}
@@ -213,11 +208,11 @@ int ConditionWideSearch (int vertexIndex, int toVertex, vector <int> &result)
 		 }
 		for (int j=0; j<graph[CurrentLevel[i].first].size(); j++)
 	    {
-		   if (graph[CurrentLevel[i].first][j].state < 3
-			   && !vertexInfo[graph[CurrentLevel[i].first][j].secondVertexIndex].BoolPar) 
+		   if (graph[CurrentLevel[i].first][j].State < 3
+			   && !vertexInfo[graph[CurrentLevel[i].first][j].AimVertexIndex].BoolPar) 
 		   {
-			   vertexInfo[graph[CurrentLevel[i].first][j].secondVertexIndex].BoolPar=true;
-			   NextLevel.push_back(make_pair(graph[CurrentLevel[i].first][j].secondVertexIndex, i));
+			   vertexInfo[graph[CurrentLevel[i].first][j].AimVertexIndex].BoolPar=true;
+			   NextLevel.push_back(make_pair(graph[CurrentLevel[i].first][j].AimVertexIndex, i));
 		   } 
 	    }
      }
@@ -254,19 +249,19 @@ int BaseCircleSearch()
 	for (int i = 0; i < graph.size(); i++)
 		for (int j = 0; j < graph[i].size(); j++)
 		{
-			if (graph[i][j].state == 0)
+			if (graph[i][j].State == 0)
 			{
-				graph[i][j].state = 3;
+				graph[i][j].State = 3;
 
 				int k;
-				for (k = 0; k < graph[graph[i][j].secondVertexIndex].size() 
-					&& graph[graph[i][j].secondVertexIndex][k].secondVertexIndex != i; k++)
+				for (k = 0; k < graph[graph[i][j].AimVertexIndex].size() 
+					&& graph[graph[i][j].AimVertexIndex][k].AimVertexIndex != i; k++)
 					;
-				graph[graph[i][j].secondVertexIndex][k].state = 3;
+				graph[graph[i][j].AimVertexIndex][k].State = 3;
 				result.clear();
-				ConditionWideSearch(i, graph[i][j].secondVertexIndex, result);
-				graph[i][j].state = 2;
-				graph[graph[i][j].secondVertexIndex][k].state = 2;
+				ConditionWideSearch(i, graph[i][j].AimVertexIndex, result);
+				graph[i][j].State = 2;
+				graph[graph[i][j].AimVertexIndex][k].State = 2;
 				for (k = 0; k < result.size(); k++)
 					cout << result[k] << ' ';
 				cout << endl;
