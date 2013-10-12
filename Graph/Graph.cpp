@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -70,7 +71,7 @@ int WideSearch (int vertexIndex)
      for (int i=0; i<CurrentLevel.size(); i++)
      {
          for (set<Connected>::iterator j=graph[CurrentLevel[i]].begin(); j != graph[CurrentLevel[i]].end(); j++)
-       {
+        {
              if (! vertexInfo[(*j).secondVertexIndex].BoolPar)
            {
 //			    ResultVertexes.push_back(graph[CurrentLevel[i]][j].secondVertexIndex);
@@ -129,9 +130,10 @@ int DepthSearch(int vertexIndex)
     Stack = stack<int>();
     Stack.push(vertexIndex);
     vertexInfo[vertexIndex].BoolPar = true;
+	int CurrentVertex;
     while (Stack.size() > 0)
     {
-        int CurrentVertex = Stack.top();
+        CurrentVertex = Stack.top();
         Stack.pop();
         DepthRezultVertexes.push_back(CurrentVertex);
         for (set <Connected>::iterator i = graph[CurrentVertex].begin(); i != graph[CurrentVertex].end(); i++)
@@ -150,7 +152,7 @@ int DepthSearch(int vertexIndex)
     return 0;
 }
 
-int markEdge(int v1, int v2, StateType stateValue)
+int markEdge(int v1, int v2, StateType stateValue, set<Connected>::iterator &edge1, set<Connected>::iterator &edge2)
 {
     for(set <Connected>::iterator i=graph[v1].begin(); i != graph[v1].end(); i++)
     {
@@ -159,7 +161,7 @@ int markEdge(int v1, int v2, StateType stateValue)
             Connected c = *i;
             c.state = stateValue;
             graph[v1].erase(i);
-            graph[v1].insert(c);
+			edge1 = graph[v1].insert(c).first;
             break;
         }
     }
@@ -170,7 +172,7 @@ int markEdge(int v1, int v2, StateType stateValue)
             Connected c = *i;
             c.state = stateValue;
             graph[v2].erase(i);
-            graph[v2].insert(c);
+			edge2 = graph[v2].insert(c).first;
             break;
         }
     }
@@ -188,6 +190,7 @@ int BasedTreeSearch(int vertexIndex)
         Stack.push(make_pair(vertexIndex, (*i).secondVertexIndex));
     }
     pair<int, int> p;
+	set <Connected>::iterator edge;
     while (Stack.size() > 0)
     {
         p = Stack.top();
@@ -195,7 +198,7 @@ int BasedTreeSearch(int vertexIndex)
         if(!vertexInfo[p.second].BoolPar)
         {
             vertexInfo[p.second].BoolPar = true;
-            markEdge(p.first, p.second, 1);
+			markEdge(p.first, p.second, 1, edge, edge);
             for(set <Connected>::iterator i = graph[p.second].begin(); i != graph[p.second].end(); i++)
             {
                 Stack.push(make_pair(p.second, (*i).secondVertexIndex));
@@ -266,38 +269,18 @@ int ConditionWideSearch (int vertexIndex, int toVertex, vector <int> &result)
 int BaseCircleSearch()
 {
     vector <int> result;
+	set<Connected>::iterator falseEdge;
     for (int i = 0; i < graph.size(); i++)
         for (set <Connected>::iterator j = graph[i].begin(); j != graph[i].end(); j++)
         {
             if ((*j).state == 0)
             {
-                Connected c = *j;
-                c.state = 3;
-                graph[i].erase(j);
-                graph[i].insert(c);
-
-                set <Connected>::iterator k;
-                for (k = graph[(*j).secondVertexIndex].begin(); k != graph[(*j).secondVertexIndex].end()
-                    && (*k).secondVertexIndex != i; k++)
-                    ;
-
-                c = *k;
-                c.state = 3;
-                graph[(*j).secondVertexIndex].erase(k);
-                graph[(*j).secondVertexIndex].insert(c);
+				markEdge(i, (*j).secondVertexIndex, 3, j, falseEdge);
 
                 result.clear();
                 ConditionWideSearch(i, (*j).secondVertexIndex, result);
 
-                c = *j;
-                c.state = 2;
-                graph[i].erase(j);
-                graph[i].insert(c);
-
-                c = *k;
-                c.state = 2;
-                graph[(*j).secondVertexIndex].erase(k);
-                graph[(*j).secondVertexIndex].insert(c);
+                //markEdge(i, (*j).secondVertexIndex, 2, j, falseEdge);
 
                 for (int l = 0; l < result.size(); l++)
                     cout << result[l] << ' ';
@@ -363,7 +346,7 @@ int main()
     //InputGraph();
     ConstGraph();
     //WideSearch(0);
-    BasedTreeSearch(0);
+    BasedTreeSearch(5);
     BaseCircleSearch();
     //system("PAUSE");
     return 0;
