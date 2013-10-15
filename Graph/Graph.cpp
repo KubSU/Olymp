@@ -49,8 +49,8 @@ public:
 	CGraph(){};
 
 	CGraph(int AVertexCount)
-	{		
-		for (int i = 0; i < AVertexCount; i++) 
+	{
+		for (int i = 0; i < AVertexCount; i++)
 			AddVertex();
 	};
 
@@ -96,7 +96,7 @@ public:
 	/// Остовное дерево.
 	CGraph SpanningTree()
 	{
-		CGraph result;
+		CGraph result(_Vertexes.size());
 
 		stack<int> vStack;
 
@@ -142,6 +142,7 @@ int main()
 	CGraph graph;
 	graph.ConstGraph();
 	graph.WriteEdgesList();
+	cout << "fsdfsd" << endl;
 	graph.SpanningTree().WriteEdgesList();
 	return 0;
 }
