@@ -67,6 +67,12 @@ public:
 		_Vertexes.push_back(TVertex());
 	};
 
+	void AddVertex(TVertex AVertex)
+	{
+		// TODO: Проверить правильность.
+		_Vertexes.push_back(AVertex);
+	};
+
 	void AddVertex(string AName, TWeightType AWeight, bool AWatched)
 	{
 		_Vertexes.push_back(TVertex(AName, AWeight, AWatched));
@@ -129,11 +135,12 @@ public:
 		return result;
 	};
 
+	/// Выводит список ребер в формате: <Начало> <Конец> <Вес>. Где <Начало>, <Конец> - индексы вершин.
 	void WriteEdgesList()
 	{
 		for (int v = 0; v < _Vertexes.size(); v++)
 			for (int e = 0; e < _Vertexes[v].Edges.size(); e++)
-				cout << v << ' ' << _Vertexes[v].Edges[e].AimVertexIndex << endl;
+				cout << v << ' ' << _Vertexes[v].Edges[e].AimVertexIndex << ' ' << _Vertexes[v].Edges[e].Weight << endl;
 	};
 };
 
