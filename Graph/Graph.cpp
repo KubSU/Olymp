@@ -29,12 +29,12 @@ struct TVertex
 {
 	string 			Name;
 	TWeightType		Weight;
-	bool 			Watched;
+	EStateType		State;
 	vector<TEdge>	Edges;
 
-	TVertex(): Name(""), Weight(DEFAULT_WEIGHT), Watched(false)  {};
+	TVertex(): Name(""), Weight(DEFAULT_WEIGHT), State(EST_UNWATCHED)  {};
 
-	TVertex(string AName, TWeightType AWeight, bool AWatched): Name(AName), Weight(AWeight), Watched(AWatched) {};
+	TVertex(string AName, TWeightType AWeight, EStateType AState): Name(AName), Weight(AWeight), State(AState) {};
 
 	void AddEdge(int AimVertex, TWeightType AWeight)
 	{
@@ -73,7 +73,7 @@ public:
 		_Vertexes.push_back(AVertex);
 	};
 
-	void AddVertex(string AName, TWeightType AWeight, bool AWatched)
+	void AddVertex(string AName, TWeightType AWeight, EStateType AWatched)
 	{
 		_Vertexes.push_back(TVertex(AName, AWeight, AWatched));
 	};
@@ -81,6 +81,12 @@ public:
 	void Clear()
 	{
 		_Vertexes.clear();
+	};
+
+	void ClearStates()
+	{
+		for (int i = 0; i < _Vertexes.size(); i++)
+			_Vertexes[i].State = EST_UNWATCHED;
 	};
 
 	void ConstGraph()
@@ -99,15 +105,21 @@ public:
 		AddEdge(4, 5, 1);
 	};
 
-	/// Остовное дерево.
-	CGraph SpanningTree()
+	/// Остовное дерево (в глубину).
+	/*! Получается обходом в глубину.
+	 *  \param 	AStartVertexIndex Индекс вершины, с которой начинается обход.
+	 *  \returns Новый граф - дерево, полученное обходом в глубину.
+	 */
+	CGraph SpanningDepthTree(int AStartVertexIndex)
 	{
 		CGraph result(_Vertexes.size());
 
+		ClearStates();
+
 		stack<int> vStack;
 
-		vStack.push(0);
-		_Vertexes[0].Watched = true;
+		vStack.push(AStartVertexIndex);
+		_Vertexes[AStartVertexIndex].State = EST_WATCHED;
 
 		while (!vStack.empty())
 		{
@@ -116,10 +128,10 @@ public:
 			for (int i = 0; i < _Vertexes[vStack.top()].Edges.size() && nextVertex == -1; i++)
 			{
 				int nv = _Vertexes[vStack.top()].Edges[i].AimVertexIndex;
-				if (!_Vertexes[nv].Watched)
+				if (_Vertexes[nv].State == EST_UNWATCHED)
 				{
 					nextVertex = nv;
-					_Vertexes[nextVertex].Watched = true;
+					_Vertexes[nextVertex].State = EST_WATCHED;
 					edgeWeight = _Vertexes[vStack.top()].Edges[i].Weight;
 				};
 			};
@@ -135,12 +147,64 @@ public:
 		return result;
 	};
 
-	/// Выводит список ребер в формате: <Начало> <Конец> <Вес>. Где <Начало>, <Конец> - индексы вершин.
+	/// Остовное дерево (в ширину).
+	/*! Получается обходом в ширину.
+	 *  \param 	AStartVertexIndex Индекс вершины, с которой начинается обход.
+	 *  \returns Новый граф - дерево, полученное обходом в ширину.
+	 */
+	CGraph SpanningWideTree(int AStartVertexIndex)
+	{
+		CGraph result(_Vertexes.size());
+
+		ClearStates();
+
+		vector<int> currentLayer;
+		vector<int> nextLayer;
+
+		nextLayer.push_back(AStartVertexIndex);
+		_Vertexes[AStartVertexIndex].State = EST_WATCHED;
+
+		while (!nextLayer.empty())
+		{
+			currentLayer = nextLayer;
+			nextLayer.clear();
+
+			for (int i = 0; i < currentLayer.size(); i++)
+			{
+				for (int ii = 0; ii < _Vertexes[currentLayer[i]].Edges.size(); ii++)
+				{
+					int nextVertexIndex = _Vertexes[currentLayer[i]].Edges[ii].AimVertexIndex;
+					if (_Vertexes[nextVertexIndex].State == EST_UNWATCHED)
+					{
+						nextLayer.push_back(nextVertexIndex);
+						_Vertexes[nextVertexIndex].State = EST_WATCHED;
+						result.AddEdge(currentLayer[i], nextVertexIndex, 1);
+					}
+				}
+			}
+		}
+		
+		return result;
+	};
+
+	/// Выводит список ребер в формате: <Начало> <Конец> <Вес> <Состояние>. Где <Начало>, <Конец> - индексы вершин.
 	void WriteEdgesList()
 	{
 		for (int v = 0; v < _Vertexes.size(); v++)
 			for (int e = 0; e < _Vertexes[v].Edges.size(); e++)
-				cout << v << ' ' << _Vertexes[v].Edges[e].AimVertexIndex << ' ' << _Vertexes[v].Edges[e].Weight << endl;
+				cout << v << ' ' << _Vertexes[v].Edges[e].AimVertexIndex << ' ' << _Vertexes[v].Edges[e].Weight << _Vertexes[v].Edges[e].State << endl;
+	};
+
+	/// Выводит список вершин.
+	void WriteVertexesList()
+	{
+		for (int v = 0; v < _Vertexes.size(); v++)
+		{
+			cout << v << ' ' << _Vertexes[v].Name << ' ' << _Vertexes[v].Weight << ' ' << _Vertexes[v].State << " |";
+			for (int e = 0; e < _Vertexes[v].Edges.size(); e++)
+				cout << ' ' << _Vertexes[v].Edges[e].AimVertexIndex;
+			cout << endl;
+		}
 	};
 };
 
@@ -148,9 +212,14 @@ int main()
 {
 	CGraph graph;
 	graph.ConstGraph();
-	graph.WriteEdgesList();
-	cout << "fsdfsd" << endl;
-	graph.SpanningTree().WriteEdgesList();
+	graph.WriteVertexesList();
+
+	cout << "Wide" << endl;
+	graph.SpanningWideTree(0).WriteVertexesList();
+
+	cout << "Depth" << endl;
+	graph.SpanningDepthTree(0).WriteVertexesList();
+
 	return 0;
 }
 
