@@ -93,16 +93,16 @@ public:
 	{
 		int vertexCount = 7;
 		for (int i = 0; i < vertexCount; i++) AddVertex();
-		AddEdge(0, 1, 1);
-		AddEdge(0, 2, 1);
-		AddEdge(1, 2, 1);
-		AddEdge(1, 3, 1);
-		AddEdge(1, 4, 1);
-		AddEdge(2, 5, 1);
-		AddEdge(2, 6, 1);
-		AddEdge(3, 4, 1);
-		AddEdge(5, 6, 1);
-		AddEdge(4, 5, 1);
+		AddEdge(0, 1, DEFAULT_WEIGHT);
+		AddEdge(0, 2, DEFAULT_WEIGHT);
+		AddEdge(1, 2, DEFAULT_WEIGHT);
+		AddEdge(1, 3, DEFAULT_WEIGHT);
+		AddEdge(1, 4, DEFAULT_WEIGHT);
+		AddEdge(2, 5, DEFAULT_WEIGHT);
+		AddEdge(2, 6, DEFAULT_WEIGHT);
+		AddEdge(3, 4, DEFAULT_WEIGHT);
+		AddEdge(5, 6, DEFAULT_WEIGHT);
+		AddEdge(4, 5, DEFAULT_WEIGHT);
 	};
 
 	/// Остовное дерево (в глубину).
@@ -178,7 +178,7 @@ public:
 					{
 						nextLayer.push_back(nextVertexIndex);
 						_Vertexes[nextVertexIndex].State = EST_WATCHED;
-						result.AddEdge(currentLayer[i], nextVertexIndex, 1);
+						result.AddEdge(currentLayer[i], nextVertexIndex, DEFAULT_WEIGHT);
 					}
 				}
 			}
