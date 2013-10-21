@@ -30,6 +30,7 @@ struct TVertex
 	string 			Name;
 	TWeightType		Weight;
 	EStateType		State;
+	int 			Parent;
 	vector<TEdge>	Edges;
 
 	TVertex(): Name(""), Weight(DEFAULT_WEIGHT), State(EST_UNWATCHED)  {};
@@ -105,6 +106,16 @@ public:
 		AddEdge(4, 5, DEFAULT_WEIGHT);
 	};
 
+	/// Геттер вершины по индексу.
+	/*! Т.к. вектор вершин приватный, то необходимо иметь для доступа к конкретной вершине.
+	 * \param AIndex Индекс возвращаемой вершины.
+	 * \returns Вершину с индексом AIndex
+	 */
+	TVertex* GetVertex(int AIndex)
+	{
+		return &_Vertexes[AIndex];
+	};
+
 	/// Остовное дерево (в глубину).
 	/*! Получается обходом в глубину.
 	 *  \param 	AStartVertexIndex Индекс вершины, с которой начинается обход.
@@ -114,32 +125,46 @@ public:
 	{
 		CGraph result(_Vertexes.size());
 
+		// Чистим состояния вершин графа.
 		ClearStates();
 
 		stack<int> vStack;
 
+		// Закидываем в стек стартовую вершину.
 		vStack.push(AStartVertexIndex);
 		_Vertexes[AStartVertexIndex].State = EST_WATCHED;
+
+		// Т.к. это корень дерева, пусть ее предок - она сама.
+		result.GetVertex(AStartVertexIndex)->Parent = AStartVertexIndex;
 
 		while (!vStack.empty())
 		{
 			int nextVertex = -1;
 			TWeightType edgeWeight;
+
+			// Просматриваем ребра последней вершины в стеке, пока не найдем непросмотренную вершину.
 			for (int i = 0; i < _Vertexes[vStack.top()].Edges.size() && nextVertex == -1; i++)
 			{
+				// Получаем индекс следующей вершины, по i-му ребру.
 				int nv = _Vertexes[vStack.top()].Edges[i].AimVertexIndex;
 				if (_Vertexes[nv].State == EST_UNWATCHED)
 				{
+					// Запоминаем ее индекс и вес, ставим в исходном графе состояние просмотрена.
 					nextVertex = nv;
 					_Vertexes[nextVertex].State = EST_WATCHED;
 					edgeWeight = _Vertexes[vStack.top()].Edges[i].Weight;
 				};
 			};
+			// Если не нашли непросмотренную вершину.
 			if (nextVertex == -1)
+				// Рассмотрим соседей предыдущей вершины.
 				vStack.pop();
 			else
 			{
 				result.AddEdge(vStack.top(), nextVertex, edgeWeight);
+				// Установим родителем рассматриваемую вершину.
+				result.GetVertex(nextVertex)->Parent = vStack.top();
+				// Рассмотрим соседей новой вершины.
 				vStack.push(nextVertex);
 			}
 		};
@@ -156,29 +181,43 @@ public:
 	{
 		CGraph result(_Vertexes.size());
 
+		// Чистим состояния вершин графа.
 		ClearStates();
 
 		vector<int> currentLayer;
 		vector<int> nextLayer;
 
+		// Закидываем в слой для просмотра стартовую вершину.
 		nextLayer.push_back(AStartVertexIndex);
 		_Vertexes[AStartVertexIndex].State = EST_WATCHED;
 
+		// Т.к. это корень дерева, пусть ее предок - она сама.
+		result.GetVertex(AStartVertexIndex)->Parent = AStartVertexIndex;
+
+		// Пока слой к просмотру не пуст
 		while (!nextLayer.empty())
 		{
+			// Делаем слой к просмотру текущим и чистим его.
 			currentLayer = nextLayer;
 			nextLayer.clear();
 
+			// Перебираем все вершины в текущем слое.
 			for (int i = 0; i < currentLayer.size(); i++)
 			{
+				// Перебираем все ребра выбранной вершины.
 				for (int ii = 0; ii < _Vertexes[currentLayer[i]].Edges.size(); ii++)
 				{
+					// Вычисляем индекс следующей вершины.
 					int nextVertexIndex = _Vertexes[currentLayer[i]].Edges[ii].AimVertexIndex;
+
+					// Если она не просмотрена, закидываем ее в слой для просмотра, добавляем ребро в результирующий граф, 
+					// помечаем ее как просмотренную в исходном графе и устанавливаем ее предка.
 					if (_Vertexes[nextVertexIndex].State == EST_UNWATCHED)
 					{
 						nextLayer.push_back(nextVertexIndex);
 						_Vertexes[nextVertexIndex].State = EST_WATCHED;
 						result.AddEdge(currentLayer[i], nextVertexIndex, DEFAULT_WEIGHT);
+						result.GetVertex(nextVertexIndex)->Parent = currentLayer[i];
 					}
 				}
 			}
@@ -200,7 +239,7 @@ public:
 	{
 		for (int v = 0; v < _Vertexes.size(); v++)
 		{
-			cout << v << ' ' << _Vertexes[v].Name << ' ' << _Vertexes[v].Weight << ' ' << _Vertexes[v].State << " |";
+			cout << v << ' ' << _Vertexes[v].Name << ' ' << _Vertexes[v].Weight << ' ' << _Vertexes[v].State << " | " << _Vertexes[v].Parent << " |";
 			for (int e = 0; e < _Vertexes[v].Edges.size(); e++)
 				cout << ' ' << _Vertexes[v].Edges[e].AimVertexIndex;
 			cout << endl;
