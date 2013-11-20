@@ -1,7 +1,8 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 #include <queue>
 #include <stack>
 #include <set>
@@ -35,10 +36,12 @@ struct Connected
         this->secondVertexIndex = secondVertexIndex;
         this->Weight = weight;
         this->state = state;
+        this->Taken = 0;
     }
     StateType state;
     int secondVertexIndex;
     WeightType Weight;
+    WeightType Taken; 
 };
 
 struct comparer
@@ -63,13 +66,14 @@ typedef vector< set<Connected, comparer> > Graph;
 
 vector<Vertex> vertexInfo;
 vector < vector<int> > ResultVertexes;
-Graph graph;
+Graph graph, graph1;
 
 
-int AddEdge(int v1, int v2, WeightType weight)
+int AddEdge(Graph *graph, int v1, int v2, WeightType weight, bool orient)
 {
-    graph[v1].insert(Connected(v2, weight, 0));
-    graph[v2].insert(Connected(v1, weight, 0));
+    (*graph)[v1].insert(Connected(v2, weight, 0));
+    if (!orient)
+		(*graph)[v2].insert(Connected(v1, weight, 0));
     return 0;
 }
 
@@ -87,6 +91,10 @@ int CreateGraph(int vertexCount)
     graph = Graph (vertexCount);
     for(int i=0; i<vertexCount; i++)
         graph[i] = set<Connected, comparer>();
+	graph1 = Graph (vertexCount);
+    for(int i=0; i<vertexCount; i++)
+        graph1[i] = set<Connected, comparer>();
+    
     vertexInfo = vector<Vertex>(vertexCount);
     for(int i=0; i<vertexCount; i++)
         vertexInfo[i] = Vertex(i, "", 0.0, false);
@@ -361,16 +369,17 @@ int FindBridges()
 	int treeSize = 0;
 	stack< pair<int, int> > Stack;
 	vector <int> marks(graph.size());
-	vector <int> startMarks(graph.size());
 	vector <int> parent(graph.size());
-	
+	vector <int> sMarks(graph.size());
+
 	for (int i = 0; i < graph.size(); i++)
 		marks[i] = parent[i] = -1;
 
     Stack = stack< pair<int,int> >();
     //Stack.push(vertexIndex);
     vertexInfo[0].BoolPar = true;
-	marks[0] = startMarks[0] = treeSize++;
+    marks[0] = treeSize++;
+    sMarks[0] = marks[0];
     for(set <Connected>::iterator i = graph[0].begin(); i != graph[0].end(); i++)
     {
         Stack.push(make_pair(0, (*i).secondVertexIndex));
@@ -384,7 +393,8 @@ int FindBridges()
         if(!vertexInfo[p.second].BoolPar)
         {
             vertexInfo[p.second].BoolPar = true;
-			marks[p.second] = startMarks[p.second] = treeSize++;
+			marks[p.second] = treeSize++;
+            sMarks[p.second] = marks[p.second];
 			parent[p.second] = p.first;
 			markEdge(p.first, p.second, 1, edge, edge);
 			int currentFirst = - 1;
@@ -408,40 +418,192 @@ int FindBridges()
 			}
         }
     }
-
-	for (int i = 1; i < graph.size(); i++)
+/*
+	for (int i = 0; i < graph.size(); i++)
 	{
-		if (marks[parent[i]] < marks[i])
-			cout << "Мост найден: " << parent[i] << ' ' << i << endl;
+    	cout << i << " (" << sMarks[i] << ") " << marks[i] << endl;
+        if (marks[parent[i]] < marks[i]) 
+            cout << "Мост: " << parent[i] << " " << i << endl;
+    }*/
+    int Z = 0;
+    for (int i = 1; i < graph.size(); i++)
+    {
+        bool p = true;
+        for (set <Connected>::iterator j=graph[i].begin(); p && j != graph[i].end(); j++)
+        {
+            p = sMarks[i] > marks[(*j).secondVertexIndex];
+        } 
+        Z += parent[i] == 0;   
+        if (!p)
+            cout << i << endl;
+    }
+    if (Z > 1) 
+        cout << 0 << endl;
+    return 0;
+}
+
+WeightType** TableGraph;
+int ConverterGraph()
+{
+    TableGraph = new WeightType*[graph.size()];
+    for (int i = 0; i < graph.size(); i++)
+        TableGraph[i] = new WeightType[graph.size()];
+    for (int i = 0; i < graph.size(); i++)
+    {
+        for (set <Connected>::iterator j=graph[i].begin(); j != graph[i].end(); j++)
+        {
+            TableGraph[i][(*j).secondVertexIndex] = (*j).Weight;
+        } 
+    }
+    return 0;
+}
+
+int Floyd()
+{
+    ConverterGraph();
+    for (int m = 0; m < graph.size(); m++)
+        for (int i = 0; i < graph.size(); i++)
+            for (int j = 0; j < graph.size(); j++)
+                if (TableGraph[i][m] + TableGraph[m][j] < TableGraph[i][j])
+                    TableGraph[i][j] = TableGraph[i][m] + TableGraph[m][j];
+    //TODO: Проверить!!!
+    return 0;
+}
+
+WeightType GetEdgeWeight (Graph &graph, int v1, int v2) 
+{
+	for (set<Connected>::iterator i = graph[v1].connected.begin(); i != graph[v1].connected.end(); i++)  
+	{
+		if ((*i).secondVertexIndex == v2) {
+			return (*i).Weight;
+		}
+	} 
+	
+	for (set<Connected>::iterator i = graph[v2].connected.begin(); i != graph[v2].connected.end(); i++)  
+	{
+		if ((*i).secondVertexIndex == v1) {
+			return -(*i).Weight;
+		}
 	}
-	cout << endl;
+}	
 
-	int children = 0;
-	for (int i = 1; i < graph.size(); i++)
-		children += (parent[i] == 0);
-	if (children > 1)
-		cout << "Точка сочленения: " << 0 << endl;
-
-	for (int i = 1; i < graph.size(); i++)
+WeightType GetEdgeTaken (Graph &graph, int v1, int v2) 
+{
+	for (set<Connected>::iterator i = graph[v1].connected.begin(); i != graph[v1].connected.end(); i++)  
 	{
-		//if (marks[i] == startMarks[i])
+		if ((*i).secondVertexIndex == v2) {
+			return (*i).Taken;
+		}
+	} 
+	
+	for (set<Connected>::iterator i = graph[v2].connected.begin(); i != graph[v2].connected.end(); i++)  
+	{
+		if ((*i).secondVertexIndex == v1) {
+			return -(*i).Taken;
+		}
+	}
+}	
+
+int AddEdgeTaken (Graph &graph, int v1, int v2, WeightType Taken) 
+{
+	for (set<Connected>::iterator i = graph[v1].connected.begin(); i != graph[v1].connected.end(); i++)  
+	{
+		if ((*i).secondVertexIndex == v2) {
+			(*i).Taken += Taken;
+			return 0;
+		}
+	} 
+	
+	for (set<Connected>::iterator i = graph[v2].connected.begin(); i != graph[v2].connected.end(); i++)  
+	{
+		if ((*i).secondVertexIndex == v1) {
+			(*i).Taken -= Taken;
+			return 0;
+		}
+	}
+	
+	return 1;
+
+}
+
+int *path = new int[graph.size()];
+
+int CalcPath(int n)
+{
+	WeightType q = 1000000, w, t; // TODO MAXINT
+	
+	for (int i = 1; i <= n; i++) {
+		w = GetEdgeWeight(graph, path[i - 1], path[i]);
+		t = GetEdgeTaken(graph, path[i - 1], path[i]);
+		if (w > 0) { 
+			q = (q > w - t) ? w - t : q;
+		} else {
+			q = q > abs(t) ? abs(t) : q;
+		}
+	}
+	
+	if (q > 0) {
+		for (int i = 1; i <= n; i++) {
+			AddEdgeTaken(graph, path[i-1], path[i], q);
+		}
+	}
+}
+
+int findAllPaths(Graph &graph, int s, int t)
+{
+	stack < pair <int, int> > st;
+
+	st.push(make_pair(s, 0));
+	pair <int, int> current;
+	set<Connected>::iterator i;
+	while (!st.empty())
+	{
+		current = st.top();
+		st.pop();
+
+		vertexInfo[current.first].BoolPar = true;
+		
+		if (current.first == t)
+		{	// Путь найден, находится в Path
+			CalcPath(st.size());
+			/*for (int i = 0; i <= st.size(); i++)
+			{
+				cout << path[i] << ' ';
+			}*/
+	//		system("PAUSE");
+			//cout << endl;
+			vertexInfo[current.first].BoolPar = false;
+		}
+		else
 		{
-			children = 0;
-			bool p = false;
-			for (set<Connected>::iterator j = graph[i].begin(); j != graph[i].end(); j++)
-				if ((*j).secondVertexIndex != parent[i])
+			i = graph[current.first].begin();
+			int j;
+			for (j = 0; j < current.second; j++)
+			{
+				i++;
+			}
+			for (;j < graph[current.first].size(); j++)
+			{
+				if (!vertexInfo[(*i).secondVertexIndex].BoolPar)
 				{
-					p = p || (marks[(*j).secondVertexIndex] >= startMarks[i]);
-					children += (marks[(*j).secondVertexIndex] > marks[i]);
+					current.second = j + 1;
+					path[st.size()] = current.first; 
+					st.push(current);
+					path[st.size()] = (*i).secondVertexIndex; 
+					st.push(make_pair((*i).secondVertexIndex, 0));
+					break;
 				}
-			if (children > 1 || p)
-				cout << "Точка сочленения: " << i << endl;
+
+				i++;
+			}
+			if (j == graph[current.first].size())
+			{
+				vertexInfo[current.first].BoolPar = false;
+			}
 		}
 	}
 
-	for (int i = 0; i < graph.size(); i++)
-		cout << i << ' ' << marks[i] << ';' << startMarks[i] << endl;
-    return 0;
+	return 0;
 }
 
 int ConstGraph()
@@ -449,23 +611,45 @@ int ConstGraph()
     int N;
     N = 9;
     CreateGraph(N);
-    AddEdge(0,8,1);
-    AddEdge(0,7,10);
-	AddEdge(2,7,10);
-	AddEdge(8,1,10);
-    AddEdge(1,3,2);
-    AddEdge(1,4,5);
-    AddEdge(2,5,2);
-	//AddEdge(7,8,1);
-    AddEdge(2,6,3);
-    AddEdge(3,4,2);
-    AddEdge(5,6,4);
+    AddEdge(&graph, 0,1,2, true);
+	AddEdge(&graph, 1,2,3, true);
+	AddEdge(&graph, 1,4,2, true);
+	AddEdge(&graph, 3,2,4, true);
+	AddEdge(&graph, 0,3,5, true);
+	AddEdge(&graph, 0,7,8, true);
+	AddEdge(&graph, 7,6,1, true);
+	AddEdge(&graph, 7,4,2, true);
+	AddEdge(&graph, 3,7,3, true);
+	AddEdge(&graph, 2,4,5, true);
+	AddEdge(&graph, 4,5,4, true);
+	AddEdge(&graph, 2,6,8, true);
+	AddEdge(&graph, 5,8,3, true);
+	AddEdge(&graph, 6,5,2, true);
+	AddEdge(&graph, 6,8,3, true);
+
+	AddEdge(&graph1, 0,1,2, false);
+	AddEdge(&graph1, 1,2,3, false);
+	AddEdge(&graph1, 1,4,2, false);
+	AddEdge(&graph1, 3,2,4, false);
+	AddEdge(&graph1, 0,3,5, false);
+	AddEdge(&graph1, 0,7,8, false);
+	AddEdge(&graph1, 7,6,1, false);
+	AddEdge(&graph1, 7,4,2, false);
+	AddEdge(&graph1, 3,7,3, false);
+	AddEdge(&graph1, 2,4,5, false);
+	AddEdge(&graph1, 4,5,4, false);
+	AddEdge(&graph1, 2,6,8, false);
+	AddEdge(&graph1, 5,8,3, false);
+	AddEdge(&graph1, 6,5,2, false);
+	AddEdge(&graph1, 6,8,3, false);
+
+    
     return 0;
 }
-
+/*
 int InputGraph()
 {
-    
+    setlocale(0,"");
     cout<<"Количество вершин=";
     int N;
     cin>>N;
@@ -495,19 +679,22 @@ int InputGraph()
     }
     return 0;
 }
+*/
 
 
 int main()
 {
-	setlocale(LC_ALL,"Russian");
+	// TODO : Удалить set из connected graph
+	// Организовать вывод найденного потока
+	
     //InputGraph();
     ConstGraph();
 	//dijkstra(0);
-	FindBridges();
+	//FindBridges();
+	findAllPaths(graph1, 0, 8);
     //WideSearch(5);
    // BasedTreeSearch(5);
     //BaseCircleSearch();
-    system("PAUSE");
+//    system("PAUSE");
     return 0;
 }
-
